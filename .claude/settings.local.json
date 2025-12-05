@@ -1,7 +1,30 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(pyinstaller:*)",
+      "Bash(source:*)",
+      "Bash(./build/nc:*)",
+      "Bash(./build/nc_cli:*)",
+      "Bash(chmod:*)",
+      "Bash(./build.sh build:*)",
+      "Bash(./build.sh:*)",
+      "Bash(brew install:*)",
+      "Bash(export NCCLI_UPGRADE_BASE_URL=https://github.com/geekgeekgo-io/nc_cli_artifactory/releases/latest/download)",
+      "Bash(gh release view:*)",
+      "Bash(curl:*)",
+      "Bash(gh repo view:*)",
+      "Bash(time ./build/nc_cli:*)",
+      "Bash(codesign:*)",
+      "Bash(time ./build/nc_cli/nc_cli:*)",
+      "Bash(xattr:*)",
+      "Bash(sudo spctl:*)",
+      "Bash(sudo bash:*)",
+      "Bash(gh release upload:*)",
+      "Bash(cat:*)",
+      "Bash(bash)",
+      "Bash(/tmp/nc_cli_test:*)",
+      "Bash(time /tmp/nc_cli_test:*)"
     ],
     "deny": [],
     "ask": []

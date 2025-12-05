@@ -2,8 +2,6 @@
 
 import click
 import sys
-from nccli.utils.hosts_parser import parse_hosts_file
-from nccli.utils.mongodb import MongoDBClient
 
 
 @click.command()
@@ -40,6 +38,10 @@ def upload_dns(hosts_file, database, collection, replace):
         export NCCLI_MONGODB_URI="mongodb://localhost:27017"
         nc uploadDns
     """
+    # Lazy imports for faster startup
+    from nccli.utils.hosts_parser import parse_hosts_file
+    from nccli.utils.mongodb import MongoDBClient
+
     try:
         # Parse hosts file
         click.echo(f"Reading hosts file from: {hosts_file}")

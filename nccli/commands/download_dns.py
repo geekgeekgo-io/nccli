@@ -3,8 +3,6 @@
 import click
 import sys
 import os
-from nccli.utils.hosts_writer import merge_hosts_entries
-from nccli.utils.mongodb import MongoDBClient
 
 
 @click.command()
@@ -45,6 +43,10 @@ def download_dns(hosts_file, database, collection, backup, dry_run):
         export NCCLI_MONGODB_URI="mongodb://localhost:27017"
         nc downloadDns --backup
     """
+    # Lazy imports for faster startup
+    from nccli.utils.hosts_writer import merge_hosts_entries
+    from nccli.utils.mongodb import MongoDBClient
+
     try:
         # Connect to MongoDB and download entries
         click.echo("Connecting to MongoDB...")

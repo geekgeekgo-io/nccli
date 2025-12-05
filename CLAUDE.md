@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NC CLI is a Python command-line tool for uploading DNS entries from `/etc/hosts` to MongoDB. The project uses modern Python packaging with `pyproject.toml` and the Click framework for CLI functionality.
+NC CLI is a Python command-line tool for syncing DNS entries between `/etc/hosts` and MongoDB. The project uses modern Python packaging with `pyproject.toml` and the Click framework for CLI functionality.
 
 ## Commands
 
@@ -16,46 +16,33 @@ pip install -e .
 
 # Install with dev dependencies
 pip install -e ".[dev]"
-
-# Install from requirements.txt
-pip install -r requirements.txt
 ```
 
 ### Running the CLI
 
 ```bash
-# Basic usage (may require sudo)
+# Upload hosts to MongoDB (may require sudo)
 sudo -E nc uploadDns
 
-# With custom options
-nc uploadDns --hosts-file /path/to/hosts --database dns_registry --collection hosts
+# Download from MongoDB and merge into hosts file
+sudo -E nc downloadDns --backup
+
+# Dry run to preview changes
+nc downloadDns --dry-run
 
 # View help
 nc --help
-nc uploadDns --help
 ```
 
 ### Development Commands
 
 ```bash
-# Format code
-black nccli/
-
-# Lint code
-flake8 nccli/
-
-# Run tests
-pytest
+black nccli/      # Format code
+flake8 nccli/     # Lint code
+pytest            # Run tests
 ```
 
 ## Architecture
-
-### Project Structure
-
-- **nccli/cli.py**: Main CLI entry point using Click's group command pattern
-- **nccli/commands/**: Individual CLI commands (currently only `upload_dns.py`)
-- **nccli/utils/hosts_parser.py**: Parser for /etc/hosts file format
-- **nccli/utils/mongodb.py**: MongoDB client with connection management and data upload
 
 ### Key Design Patterns
 
@@ -66,19 +53,23 @@ pytest
 
 **Context Managers**: The `MongoDBClient` class implements context manager protocol (`__enter__`/`__exit__`) for automatic connection cleanup.
 
-**Configuration**: MongoDB connection URI is read from the `NCCLI_MONGODB_URI` environment variable, following 12-factor app configuration principles.
+**Configuration**: MongoDB connection URI is read from the `NCCLI_MONGODB_URI` environment variable.
 
 ### Data Flow
 
-1. `upload_dns` command is invoked via CLI
-2. `parse_hosts_file()` reads and parses /etc/hosts
-3. Returns list of dictionaries with structure: `{"ip": "...", "hostname": "...", "source": "...", "line_number": ...}`
-4. `MongoDBClient` connects to MongoDB using URI from environment
-5. Entries are inserted into specified database/collection using `insert_many()`
+**Upload (uploadDns)**:
+1. `parse_hosts_file()` reads and parses /etc/hosts
+2. Returns list of dicts: `{"ip": "...", "hostname": "...", "source": "...", "line_number": ...}`
+3. `MongoDBClient.upload_entries()` inserts into MongoDB
+
+**Download (downloadDns)**:
+1. `MongoDBClient.download_entries()` retrieves entries from MongoDB
+2. `merge_hosts_entries()` merges with existing hosts file, preserving comments and structure
+3. New entries appended under `# Entries added from MongoDB` section
 
 ## Important Notes
 
-- The `/etc/hosts` file typically requires root permissions to read, so commands may need `sudo -E` (the `-E` preserves environment variables)
-- The hosts parser handles comments (lines starting with `#`), inline comments, and multiple hostnames per IP
-- Each hostname associated with an IP gets its own database entry for easier querying
-- MongoDB connection failures are caught and reported with helpful error messages
+- Commands typically require `sudo -E` (the `-E` preserves environment variables including `NCCLI_MONGODB_URI`)
+- The hosts parser handles comments, inline comments, and multiple hostnames per IP
+- Each hostname gets its own database entry for easier querying
+- The merge writer preserves existing hosts file structure and only updates/adds entries from MongoDB

@@ -37,6 +37,7 @@ class LazyGroup(click.Group):
     'downloadDns': 'nccli.commands.download_dns.download_dns',
     'upgrade': 'nccli.commands.upgrade.upgrade',
     'config': 'nccli.commands.config_cmd.config',
+    'commit': 'nccli.commands.commit.commit',
 })
 @click.version_option(version=__version__)
 def main():

@@ -24,7 +24,9 @@
       "Bash(cat:*)",
       "Bash(bash)",
       "Bash(/tmp/nc_cli_test:*)",
-      "Bash(time /tmp/nc_cli_test:*)"
+      "Bash(time /tmp/nc_cli_test:*)",
+      "Bash(nc commit --help:*)",
+      "Bash(nc commit:*)"
     ],
     "deny": [],
     "ask": []

@@ -2,13 +2,19 @@ name: Build and Release
 
 on:
   push:
+    branches:
+      - main  # Build on every push to main
     tags:
-      - 'v*'  # Trigger on version tags like v0.1.0, v1.0.0
+      - 'v*'  # Also trigger on version tags
   workflow_dispatch:  # Allow manual triggering
     inputs:
       version:
         description: 'Version to release (e.g., 0.1.0)'
-        required: true
+        required: false
+      create_release:
+        description: 'Create a release'
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -36,8 +42,12 @@ jobs:
         run: |
           if [ -n "${{ github.event.inputs.version }}" ]; then
             echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          else
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          else
+            # Extract version from pyproject.toml
+            VERSION=$(grep 'version = ' pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+            echo "VERSION=${VERSION}-dev" >> $GITHUB_OUTPUT
           fi
 
       - name: Install dependencies
@@ -88,6 +98,8 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    # Only run release job on tag push or manual trigger with create_release
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == 'true'
     permissions:
       contents: write
 
@@ -145,12 +157,6 @@ jobs:
             **macOS (Apple Silicon / M1/M2/M3):**
             ```bash
             curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.TAG }}/nccli-darwin-arm64 -o /usr/local/bin/nccli
-            chmod +x /usr/local/bin/nccli
-            ```
-
-            **macOS (Intel):**
-            ```bash
-            curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.TAG }}/nccli-darwin-amd64 -o /usr/local/bin/nccli
             chmod +x /usr/local/bin/nccli
             ```
 

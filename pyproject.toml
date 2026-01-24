@@ -26,3 +26,6 @@ dev = [
     "black>=22.0.0",
     "flake8>=4.0.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["nccli*"]

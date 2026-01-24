@@ -1,0 +1,186 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v0.1.0, v1.0.0
+  workflow_dispatch:  # Allow manual triggering
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.1.0)'
+        required: true
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platform: darwin-arm64
+            runner_arch: ARM64
+          - os: macos-13
+            platform: darwin-amd64
+            runner_arch: X64
+          - os: ubuntu-latest
+            platform: linux-amd64
+            runner_arch: X64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pyinstaller certifi
+
+      - name: Build binary
+        run: |
+          BINARY_NAME="nccli-${{ matrix.platform }}"
+
+          pyinstaller --onefile \
+            --name "$BINARY_NAME" \
+            --distpath ./dist \
+            --workpath ./build \
+            --hidden-import=nccli.commands.upload_dns \
+            --hidden-import=nccli.commands.download_dns \
+            --hidden-import=nccli.commands.upgrade \
+            --hidden-import=nccli.commands.config_cmd \
+            --hidden-import=nccli.commands.commit \
+            --hidden-import=nccli.utils.hosts_parser \
+            --hidden-import=nccli.utils.hosts_writer \
+            --hidden-import=nccli.utils.mongodb \
+            --hidden-import=nccli.utils.config \
+            --hidden-import=certifi \
+            -y nccli/cli.py
+
+          # Create version file
+          echo "${{ steps.version.outputs.VERSION }}" > ./dist/version.txt
+
+          # List outputs
+          ls -la ./dist/
+
+      - name: Test binary
+        run: |
+          ./dist/nccli-${{ matrix.platform }} --version
+          ./dist/nccli-${{ matrix.platform }} --help
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nccli-${{ matrix.platform }}
+          path: |
+            ./dist/nccli-${{ matrix.platform }}
+            ./dist/version.txt
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "TAG=v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+            echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p ./release
+
+          # Copy all platform binaries
+          for dir in ./artifacts/nccli-*; do
+            if [ -d "$dir" ]; then
+              platform=$(basename "$dir")
+              cp "$dir/$platform" ./release/ 2>/dev/null || true
+            fi
+          done
+
+          # Copy version file
+          cp ./artifacts/nccli-darwin-arm64/version.txt ./release/ 2>/dev/null || \
+          cp ./artifacts/nccli-linux-amd64/version.txt ./release/ 2>/dev/null || true
+
+          # Make all binaries executable
+          chmod +x ./release/nccli-* 2>/dev/null || true
+
+          ls -la ./release/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          name: NCCLI ${{ steps.version.outputs.TAG }}
+          body: |
+            ## NCCLI ${{ steps.version.outputs.TAG }}
+
+            ### Installation
+
+            **macOS (Apple Silicon / M1/M2/M3):**
+            ```bash
+            curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.TAG }}/nccli-darwin-arm64 -o /usr/local/bin/nccli
+            chmod +x /usr/local/bin/nccli
+            ```
+
+            **macOS (Intel):**
+            ```bash
+            curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.TAG }}/nccli-darwin-amd64 -o /usr/local/bin/nccli
+            chmod +x /usr/local/bin/nccli
+            ```
+
+            **Linux (x86_64):**
+            ```bash
+            curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.TAG }}/nccli-linux-amd64 -o /usr/local/bin/nccli
+            chmod +x /usr/local/bin/nccli
+            ```
+
+            ### Upgrade
+
+            If you already have nccli installed:
+            ```bash
+            nccli upgrade
+            ```
+
+            ### Verify Installation
+
+            ```bash
+            nccli --version
+            nccli --help
+            ```
+          files: |
+            ./release/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

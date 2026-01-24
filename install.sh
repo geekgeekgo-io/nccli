@@ -1,156 +1,129 @@
 #!/bin/bash
 
-# NC CLI Installation Script
-# Downloads and installs nc_cli from GitHub releases
+# NC CLI Installer
+# Downloads and installs the latest version of nc_cli
 
 set -e
 
 # Configuration
-GITHUB_REPO="geekgeekgo-io/nc_cli_artifactory"
-INSTALL_DIR="/usr/local/bin"
-BINARY_NAME="nc_cli"
-CONFIG_DIR="$HOME/.nc_cli"
-CONFIG_FILE="$CONFIG_DIR/config"
-DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/latest/download/${BINARY_NAME}"
-UPGRADE_URL="https://github.com/${GITHUB_REPO}/releases/latest/download"
+GITHUB_REPO="${NCCLI_GITHUB_REPO:-geekgeekgo-io/nccli}"
+INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
+BINARY_NAME="nccli"
 
-echo "=========================================="
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo "================================"
 echo "NC CLI Installer"
-echo "=========================================="
+echo "================================"
 echo ""
 
-# Check if running on macOS
-if [[ "$(uname)" != "Darwin" ]]; then
-    echo "Error: This installer is for macOS only."
+# Detect platform
+SYSTEM=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m | tr '[:upper:]' '[:lower:]')
+
+# Normalize architecture
+case "$ARCH" in
+    x86_64|amd64)
+        ARCH="amd64"
+        ;;
+    arm64|aarch64)
+        ARCH="arm64"
+        ;;
+    *)
+        echo -e "${RED}Error: Unsupported architecture: $ARCH${NC}"
+        exit 1
+        ;;
+esac
+
+# Check supported platform
+case "$SYSTEM" in
+    darwin|linux)
+        ;;
+    *)
+        echo -e "${RED}Error: Unsupported operating system: $SYSTEM${NC}"
+        exit 1
+        ;;
+esac
+
+PLATFORM="${SYSTEM}-${ARCH}"
+ASSET_NAME="nccli-${PLATFORM}"
+
+echo "Platform: $PLATFORM"
+echo "Repository: $GITHUB_REPO"
+echo ""
+
+# Get latest release info
+echo "Fetching latest release..."
+RELEASE_INFO=$(curl -sL "https://api.github.com/repos/${GITHUB_REPO}/releases/latest")
+
+if echo "$RELEASE_INFO" | grep -q "Not Found"; then
+    echo -e "${RED}Error: No releases found for repository: $GITHUB_REPO${NC}"
+    echo "Make sure the repository exists and has at least one release."
     exit 1
 fi
 
-# Check architecture
-ARCH=$(uname -m)
-echo "Detected architecture: $ARCH"
+VERSION=$(echo "$RELEASE_INFO" | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')
+DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/${VERSION}/${ASSET_NAME}"
 
-# Create install directory if it doesn't exist
-if [[ ! -d "$INSTALL_DIR" ]]; then
-    echo "Creating $INSTALL_DIR..."
-    sudo mkdir -p "$INSTALL_DIR"
-fi
-
-# Download the binary (with -L to follow redirects)
+echo "Latest version: $VERSION"
+echo "Download URL: $DOWNLOAD_URL"
 echo ""
-echo "Downloading nc_cli from GitHub..."
-TEMP_FILE=$(mktemp)
-if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_FILE"; then
-    echo "Error: Failed to download nc_cli from $DOWNLOAD_URL"
-    rm -f "$TEMP_FILE"
+
+# Create temp directory
+TMP_DIR=$(mktemp -d)
+TMP_FILE="${TMP_DIR}/${BINARY_NAME}"
+
+# Download binary
+echo "Downloading..."
+if ! curl -fsSL "$DOWNLOAD_URL" -o "$TMP_FILE"; then
+    echo -e "${RED}Error: Failed to download binary${NC}"
+    echo "URL: $DOWNLOAD_URL"
+    rm -rf "$TMP_DIR"
     exit 1
 fi
 
-# Check if download was successful (file size > 0)
-if [[ ! -s "$TEMP_FILE" ]]; then
-    echo "Error: Downloaded file is empty"
-    rm -f "$TEMP_FILE"
+# Make executable
+chmod +x "$TMP_FILE"
+
+# Test binary
+echo "Verifying binary..."
+if ! "$TMP_FILE" --version &>/dev/null; then
+    echo -e "${RED}Error: Downloaded binary is not valid${NC}"
+    rm -rf "$TMP_DIR"
     exit 1
 fi
 
-# Install the binary
-echo "Installing to $INSTALL_DIR/$BINARY_NAME..."
-sudo mv "$TEMP_FILE" "$INSTALL_DIR/$BINARY_NAME"
-sudo chmod +x "$INSTALL_DIR/$BINARY_NAME"
-
-# Remove quarantine flag for faster startup
-echo "Removing quarantine flag..."
-sudo xattr -cr "$INSTALL_DIR/$BINARY_NAME" 2>/dev/null || true
-
-# Create config directory and file
+# Install
 echo ""
-echo "Setting up configuration..."
-mkdir -p "$CONFIG_DIR"
+echo "Installing to ${INSTALL_DIR}/${BINARY_NAME}..."
 
-# Create config file if it doesn't exist
-if [[ ! -f "$CONFIG_FILE" ]]; then
-    cat > "$CONFIG_FILE" << EOF
-# NC CLI Configuration
-# This file is auto-loaded on startup
-
-# MongoDB connection URI (required for uploadDns/downloadDns)
-# Example: mongodb://user:pass@host:27017/database?authSource=admin
-NCCLI_MONGODB_URI=
-
-# Upgrade URL for auto-updates (do not modify unless you have a custom release server)
-NCCLI_UPGRADE_BASE_URL=${UPGRADE_URL}
-EOF
-    echo "Config file created at: $CONFIG_FILE"
+# Check if we need sudo
+if [ -w "$INSTALL_DIR" ]; then
+    mv "$TMP_FILE" "${INSTALL_DIR}/${BINARY_NAME}"
 else
-    echo "Config file already exists at: $CONFIG_FILE"
+    echo -e "${YELLOW}Requires sudo to install to ${INSTALL_DIR}${NC}"
+    sudo mv "$TMP_FILE" "${INSTALL_DIR}/${BINARY_NAME}"
+    sudo chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
 fi
+
+# Cleanup
+rm -rf "$TMP_DIR"
 
 # Verify installation
 echo ""
-echo "Verifying installation..."
-if command -v nc_cli &> /dev/null; then
-    VERSION=$(nc_cli --version 2>/dev/null || echo "unknown")
-    echo "Installed: $VERSION"
+if command -v "$BINARY_NAME" &>/dev/null; then
+    echo -e "${GREEN}Installation successful!${NC}"
+    echo ""
+    "$BINARY_NAME" --version
+    echo ""
+    echo "Run 'nccli --help' to get started."
+    echo "Run 'nccli upgrade' to update to the latest version."
 else
-    echo "Warning: nc_cli not found in PATH"
-    echo "You may need to add $INSTALL_DIR to your PATH"
+    echo -e "${YELLOW}Binary installed to ${INSTALL_DIR}/${BINARY_NAME}${NC}"
+    echo "Add ${INSTALL_DIR} to your PATH if it's not already there:"
+    echo "  export PATH=\"${INSTALL_DIR}:\$PATH\""
 fi
-
-# Post-installation steps
-echo ""
-echo "=========================================="
-echo "Installation complete!"
-echo "=========================================="
-echo ""
-echo "============================================"
-echo "POST-INSTALLATION STEPS"
-echo "============================================"
-echo ""
-echo "Step 1: Configure MongoDB connection"
-echo "-------------------------------------"
-echo "Edit the config file to add your MongoDB URI:"
-echo ""
-echo "  nano $CONFIG_FILE"
-echo ""
-echo "Or run:"
-echo ""
-echo "  nc_cli config --init --mongodb-uri \"mongodb://user:pass@host:27017/db?authSource=admin\""
-echo ""
-echo ""
-echo "Step 2: Verify configuration"
-echo "----------------------------"
-echo "  nc_cli config --show"
-echo ""
-echo ""
-echo "============================================"
-echo "USAGE EXAMPLES"
-echo "============================================"
-echo ""
-echo "# Show help"
-echo "nc_cli --help"
-echo ""
-echo "# Show/manage configuration"
-echo "nc_cli config --show"
-echo ""
-echo "# Upload /etc/hosts to MongoDB"
-echo "sudo -E nc_cli uploadDns"
-echo ""
-echo "# Download from MongoDB to /etc/hosts"
-echo "sudo -E nc_cli downloadDns --backup"
-echo ""
-echo "# Check for updates"
-echo "nc_cli upgrade --check"
-echo ""
-echo "# Upgrade to latest version"
-echo "nc_cli upgrade"
-echo ""
-echo "============================================"
-echo "CONFIGURATION FILE"
-echo "============================================"
-echo ""
-echo "Location: $CONFIG_FILE"
-echo ""
-echo "Current contents:"
-echo "---"
-cat "$CONFIG_FILE"
-echo "---"
-echo ""

@@ -50,3 +50,9 @@ Thumbs.db
 # Environment variables
 .env
 .env.local
+
+# PyInstaller
+pyinstaller_build/
+
+# CLI virtual environment
+.cli_env/

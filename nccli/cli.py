@@ -38,6 +38,8 @@ class LazyGroup(click.Group):
     'upgrade': 'nccli.commands.upgrade.upgrade',
     'config': 'nccli.commands.config_cmd.config',
     'commit': 'nccli.commands.commit.commit',
+    'version': 'nccli.commands.info.version',
+    'about': 'nccli.commands.info.about',
 })
 @click.version_option(version=__version__)
 def main():

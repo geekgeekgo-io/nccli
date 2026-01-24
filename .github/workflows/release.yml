@@ -73,6 +73,7 @@ jobs:
             --hidden-import=nccli.utils.hosts_writer \
             --hidden-import=nccli.utils.mongodb \
             --hidden-import=nccli.utils.config \
+            --hidden-import=nccli.commands.info \
             --hidden-import=certifi \
             -y nccli/cli.py
 

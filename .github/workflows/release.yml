@@ -18,7 +18,7 @@ jobs:
           - os: macos-latest
             platform: darwin-arm64
             runner_arch: ARM64
-          - os: macos-13-large
+          - os: macos-15-large
             platform: darwin-amd64
             runner_arch: X64
           - os: ubuntu-latest

@@ -1,3 +1,3 @@
-"""NC CLI - A tool for managing DNS entries in MongoDB."""
+"""NC CLI - A tool for managing nc.local lab."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

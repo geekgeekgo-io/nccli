@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nccli"
-version = "0.1.0"
-description = "A CLI tool for uploading DNS entries to MongoDB"
+version = "0.2.0"
+description = "A CLI tool for managing nc.local lab"
 readme = "README.md"
 requires-python = ">=3.8"
 authors = [

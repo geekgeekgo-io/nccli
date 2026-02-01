@@ -17,28 +17,36 @@ A command-line tool for uploading DNS entries from `/etc/hosts` to MongoDB.
 
 ## Installation
 
+### Quick Install (Recommended)
+
+**macOS (Apple Silicon):**
+```bash
+curl -fsSL https://github.com/geekgeekgo-io/nccli/releases/latest/download/nccli-darwin-arm64 -o /usr/local/bin/nccli && chmod +x /usr/local/bin/nccli
+```
+
+**Linux (x86_64):**
+```bash
+curl -fsSL https://github.com/geekgeekgo-io/nccli/releases/latest/download/nccli-linux-amd64 -o /usr/local/bin/nccli && chmod +x /usr/local/bin/nccli
+```
+
+**Or use the install script:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/geekgeekgo-io/nccli/main/install.sh | sudo bash
+```
+
+See [INSTALL.md](INSTALL.md) for detailed installation instructions including:
+- macOS Intel and ARM64
+- Linux ARM64
+- Installing from source
+- Custom install locations
+- Troubleshooting
+
 ### From Source
 
-1. Clone the repository:
 ```bash
-git clone http://192.168.1.150/geekgeekgo/geek_cli.git
-cd geek_cli
-```
-
-2. Install the package:
-```bash
+git clone https://github.com/geekgeekgo-io/nccli.git
+cd nccli
 pip install -e .
-```
-
-Or install with development dependencies:
-```bash
-pip install -e ".[dev]"
-```
-
-### Using pip
-
-```bash
-pip install .
 ```
 
 ## Configuration

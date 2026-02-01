@@ -43,7 +43,7 @@ class LazyGroup(click.Group):
 })
 @click.version_option(version=__version__)
 def main():
-    """NC CLI - A tool for managing DNS entries."""
+    """NC CLI - A tool for managing nc.local lab."""
     pass
 
 

@@ -1,4 +1,4 @@
-"""Upgrade command for nc_cli using GitHub Releases."""
+"""Upgrade command for nccli using GitHub Releases."""
 
 import click
 import json

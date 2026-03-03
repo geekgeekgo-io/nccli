@@ -1,4 +1,4 @@
-"""Configuration loader for nc_cli."""
+"""Configuration loader for nccli."""
 
 import os
 from pathlib import Path

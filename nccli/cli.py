@@ -4,7 +4,7 @@ import click
 from nccli import __version__
 from nccli.utils.config import load_config
 
-# Load configuration from ~/.nc_cli/config on startup
+# Load configuration from ~/.nc_cli/config on startup (legacy path kept for compatibility)
 load_config()
 
 
@@ -40,6 +40,9 @@ class LazyGroup(click.Group):
     'commit': 'nccli.commands.commit.commit',
     'version': 'nccli.commands.info.version',
     'about': 'nccli.commands.info.about',
+    'welcome': 'nccli.commands.welcome.welcome',
+    'proxy': 'nccli.commands.proxy.proxy',
+    'help': 'nccli.commands.help_cmd.help_cmd',
 })
 @click.version_option(version=__version__)
 def main():

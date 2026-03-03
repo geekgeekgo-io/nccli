@@ -1,4 +1,4 @@
-"""Config command for nc_cli."""
+"""Config command for nccli."""
 
 import click
 import os
@@ -22,14 +22,14 @@ import os
 )
 def config(init, show, mongodb_uri):
     """
-    Manage nc_cli configuration.
+    Manage nccli configuration.
 
     Config file location: ~/.nc_cli/config
 
     Example:
-        nc_cli config --init
-        nc_cli config --init --mongodb-uri "mongodb://localhost:27017"
-        nc_cli config --show
+        nccli config --init
+        nccli config --init --mongodb-uri "mongodb://localhost:27017"
+        nccli config --show
     """
     from nccli.utils.config import get_config_path, init_config, find_config_file
 

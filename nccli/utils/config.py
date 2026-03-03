@@ -13,7 +13,7 @@ CONFIG_LOCATIONS = [
 # Default configuration values
 DEFAULT_CONFIG = {
     "NCCLI_MONGODB_URI": "",
-    "NCCLI_UPGRADE_BASE_URL": "https://github.com/geekgeekgo-io/nc_cli_artifactory/releases/latest/download",
+    "NCCLI_UPGRADE_BASE_URL": "",
 }
 
 

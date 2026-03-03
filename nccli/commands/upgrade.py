@@ -205,6 +205,11 @@ def compare_versions(current, remote):
     help='Only check for updates, do not download'
 )
 @click.option(
+    '--yes', '-y',
+    is_flag=True,
+    help='Skip confirmation prompt'
+)
+@click.option(
     '--force',
     is_flag=True,
     help='Force upgrade even if already on latest version'
@@ -220,7 +225,7 @@ def compare_versions(current, remote):
     envvar='NCCLI_UPGRADE_BASE_URL',
     help='Custom base URL for upgrades (overrides GitHub)'
 )
-def upgrade(check, force, repo, url):
+def upgrade(check, yes, force, repo, url):
     """
     Upgrade nccli to the latest version.
 
@@ -230,6 +235,7 @@ def upgrade(check, force, repo, url):
     \b
     Examples:
         nccli upgrade              # Upgrade from default GitHub repo
+        nccli upgrade -y           # Upgrade without confirmation prompt
         nccli upgrade --check      # Check for updates only
         nccli upgrade --force      # Force reinstall current version
 
@@ -301,7 +307,7 @@ def upgrade(check, force, repo, url):
         sys.exit(1)
 
     # Confirm upgrade
-    if not force:
+    if not force and not yes:
         if not click.confirm("Do you want to proceed with the upgrade?"):
             click.echo("Upgrade cancelled.")
             return

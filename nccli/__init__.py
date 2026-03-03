@@ -1,3 +1,3 @@
 """NC CLI - A tool for managing nc.local lab."""
 
-__version__ = "0.4.6"
+__version__ = "0.4.7"

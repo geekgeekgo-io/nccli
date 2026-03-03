@@ -77,6 +77,7 @@ jobs:
             --hidden-import=nccli.commands.proxy \
             --hidden-import=nccli.commands.welcome \
             --hidden-import=nccli.commands.help_cmd \
+            --hidden-import=nccli.commands.hello \
             --hidden-import=certifi \
             -y nccli/cli.py
 

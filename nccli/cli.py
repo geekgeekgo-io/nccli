@@ -43,6 +43,7 @@ class LazyGroup(click.Group):
     'welcome': 'nccli.commands.welcome.welcome',
     'proxy': 'nccli.commands.proxy.proxy',
     'help': 'nccli.commands.help_cmd.help_cmd',
+    'hello': 'nccli.commands.hello.hello',
 })
 @click.version_option(version=__version__)
 def main():

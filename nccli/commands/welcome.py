@@ -30,17 +30,22 @@ def welcome(target, text, font, color):
     TARGET is the SSH destination (e.g., root@192.168.1.41).
 
     Installs figlet and configures a custom SSH login banner with
-    ASCII art and system information.
+    ASCII art and system information. Automatically enables MOTD
+    display if disabled in PAM or sshd_config.
 
     \b
     Examples:
         nccli welcome root@192.168.1.41
         nccli welcome root@192.168.1.41 --text "PROD-API"
+        nccli welcome nat@192.168.1.146 --text "DOCKERAPP02"
         nccli welcome root@192.168.1.41 --text "DEV-01" --font big --color green
 
     \b
     The --text flag sets the large ASCII art banner text shown at login.
     If omitted, the server's hostname is used automatically.
+
+    \b
+    Works with both root and non-root users (uses sudo when needed).
     """
     color_codes = {
         'red': '31',
@@ -60,7 +65,7 @@ def welcome(target, text, font, color):
         click.echo("  Banner text: (hostname)")
     click.echo(f"  Font: {font}, Color: {color}")
 
-    # Build the MOTD script - matching the user's expected format
+    # Build the MOTD script
     motd_script = f'''#!/bin/bash
 #
 # Custom Welcome Screen
@@ -98,26 +103,81 @@ echo ""
 '''
 
     # Build the remote setup script
+    # Uses $SUDO which is set to "sudo" for non-root users, empty for root
     remote_script = f'''set -e
 
+# Detect if we need sudo
+if [ "$(id -u)" -eq 0 ]; then
+    SUDO=""
+else
+    if sudo -n true 2>/dev/null; then
+        SUDO="sudo"
+    else
+        echo "Error: Not root and sudo requires a password. Run as root or configure passwordless sudo."
+        exit 1
+    fi
+fi
+
 echo "Installing figlet..."
-apt-get update -qq
-apt-get install -y -qq figlet > /dev/null 2>&1
+$SUDO apt-get update -qq
+$SUDO apt-get install -y -qq figlet > /dev/null 2>&1
 echo "figlet installed"
 
 # Create custom MOTD script
-cat > /etc/update-motd.d/00-custom-welcome << 'MOTD_EOF'
+$SUDO tee /etc/update-motd.d/00-custom-welcome > /dev/null << 'MOTD_EOF'
 {motd_script}
 MOTD_EOF
 
-chmod +x /etc/update-motd.d/00-custom-welcome
+$SUDO chmod +x /etc/update-motd.d/00-custom-welcome
 
 # Disable some default MOTD scripts that may clutter the output
 for f in /etc/update-motd.d/10-help-text /etc/update-motd.d/50-motd-news /etc/update-motd.d/80-livepatch; do
     if [ -f "$f" ]; then
-        chmod -x "$f" 2>/dev/null || true
+        $SUDO chmod -x "$f" 2>/dev/null || true
     fi
 done
+
+# ============================================================
+# Ensure MOTD is displayed on SSH login
+# ============================================================
+SSHD_CHANGED=0
+PAM_CHANGED=0
+
+# Fix sshd_config: PrintMotd must be yes
+if grep -q "^PrintMotd no" /etc/ssh/sshd_config 2>/dev/null; then
+    $SUDO sed -i 's/^PrintMotd no/PrintMotd yes/' /etc/ssh/sshd_config
+    echo "Fixed: PrintMotd set to yes in sshd_config"
+    SSHD_CHANGED=1
+elif ! grep -q "^PrintMotd" /etc/ssh/sshd_config 2>/dev/null; then
+    echo "PrintMotd yes" | $SUDO tee -a /etc/ssh/sshd_config > /dev/null
+    echo "Fixed: Added PrintMotd yes to sshd_config"
+    SSHD_CHANGED=1
+fi
+
+# Fix PAM: enable pam_motd.so lines if commented out
+if [ -f /etc/pam.d/sshd ]; then
+    if grep -q "^#.*pam_motd.so.*motd=/run/motd.dynamic" /etc/pam.d/sshd 2>/dev/null; then
+        $SUDO sed -i 's|^#\(.*pam_motd.so.*motd=/run/motd.dynamic\)|\1|' /etc/pam.d/sshd
+        echo "Fixed: Enabled pam_motd.so (dynamic) in PAM"
+        PAM_CHANGED=1
+    fi
+    if grep -q "^#.*pam_motd.so noupdate" /etc/pam.d/sshd 2>/dev/null; then
+        $SUDO sed -i 's|^#\(.*pam_motd.so noupdate\)|\1|' /etc/pam.d/sshd
+        echo "Fixed: Enabled pam_motd.so (noupdate) in PAM"
+        PAM_CHANGED=1
+    fi
+fi
+
+# Restart SSH if config changed
+if [ "$SSHD_CHANGED" -eq 1 ] || [ "$PAM_CHANGED" -eq 1 ]; then
+    if $SUDO systemctl restart ssh 2>/dev/null; then
+        echo "SSH service restarted"
+    elif $SUDO systemctl restart sshd 2>/dev/null; then
+        echo "SSHD service restarted"
+    else
+        echo "Warning: Could not restart SSH service, changes apply on next restart"
+    fi
+fi
 
 echo ""
 echo "Testing welcome screen..."

@@ -11,7 +11,6 @@ curl -fsSL https://raw.githubusercontent.com/geekgeekgo-io/nccli/main/install.sh
 ```
 
 If you need to install to `/usr/local/bin` (default), you may need sudo:
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/geekgeekgo-io/nccli/main/install.sh | sudo bash
 ```

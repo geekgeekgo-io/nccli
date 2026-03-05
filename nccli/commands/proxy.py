@@ -147,6 +147,9 @@ server {{
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 1d;
 
+    # HSTS - enforce HTTPS in browsers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
     # Health check endpoint
     location = /health {{
         return 200 "ok";
